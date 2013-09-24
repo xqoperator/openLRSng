@@ -277,6 +277,10 @@ uint8_t serial_head;
 uint8_t serial_tail;
 uint8_t serial_okToSend; // 2 if it is ok to send serial instead of servo
 
+void serial_pc(char c) {
+  Serial.print(c);
+}
+
 void setup(void)
 {
   uint32_t start;
@@ -308,14 +312,15 @@ void setup(void)
   buzzerInit();
 
   Serial.begin(SERIAL_BAUD_RATE);
+  set_printf(&serial_pc);
 
   if (bindReadEeprom()) {
-    Serial.println("Loaded settings from EEPROM\n");
+    PRINT("Loaded settings from EEPROM\n");
   } else {
-    Serial.print("EEPROM data not valid, reiniting\n");
+    PRINT("EEPROM data not valid, reiniting\n");
     bindInitDefaults();
     bindWriteEeprom();
-    Serial.print("EEPROM data saved\n");
+    PRINT("EEPROM data saved\n");
   }
 
   setupPPMinput();
@@ -339,7 +344,7 @@ void setup(void)
     Serial.read();
   }
 
-  Serial.println("OpenLRSng starting");
+  PRINT("OpenLRSng starting\n");
 
   delay(200);
   checkBND();
@@ -367,7 +372,7 @@ void loop(void)
 {
 
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    Serial.println("module locked?");
+    PRINT("module locked?\n");
     Red_LED_ON;
     init_rfm(0);
     rx_reset();
@@ -411,9 +416,7 @@ void loop(void)
 
 #ifdef TEST_DUMP_AFCC
 #define SIGNIT(x) ((int16_t)(((x&0x200)?0xFC00U:0)|(x&0x3FF)))
-        Serial.print(SIGNIT(rfmGetAFCC()));
-        Serial.print(':');
-        Serial.println(SIGNIT((rx_buf[4] << 8) + rx_buf[5]));
+        PRINTF("%d:%d\n", SIGNIT(rfmGetAFCC()), SIGNIT((rx_buf[4] << 8) + rx_buf[5]));
 #endif
       }
     }

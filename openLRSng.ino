@@ -42,7 +42,7 @@
 
 //####### COMPILATION TARGET #######
 // Enable to compile transmitter code, default is RX
-//#define COMPILE_TX
+#define COMPILE_TX
 
 //####### TX BOARD TYPE #######
 // 0 = Flytron OpenLRS M1 Tx Board (not verified)
@@ -77,6 +77,8 @@
 #include "hardware.h"
 #include "binding.h"
 #include "common.h"
+
+#include "printf.h"
 
 #ifdef COMPILE_TX
 #include "binary_com.h"

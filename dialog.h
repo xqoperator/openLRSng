@@ -9,29 +9,22 @@ char    CLI_buffer[EDIT_BUFFER_SIZE+1];
 uint8_t CLI_buffer_position = 0;
 bool    CLI_magic_set = 0;
 
-static char hexTab[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-
 void hexDump(void *in, uint16_t bytes)
 {
   uint16_t check=0;
   uint8_t  *p = (uint8_t*)in;
-  Serial.print("@S:");
-  Serial.print(bytes);
+  my_printf("@S:%d",bytes);
   if (bytes) {
-    Serial.print("H:");
+    my_printf("H:");
     while (bytes) {
-      Serial.print(hexTab[*(p)>>4]);
-      Serial.print(hexTab[*(p)&15]);
-      Serial.print(',');
+      my_printf("%0X,",*p);
       check = ((check << 1) + ((check & 0x8000) ? 1 : 0));
       check ^= *p;
       p++;
       bytes--;
     }
   }
-  Serial.print("T:");
-  Serial.print(check,16);
-  Serial.println(":");
+  my_printf("T:%X:",check);
 }
 
 void hexGet(void *out, uint16_t expected)
@@ -111,7 +104,7 @@ void hexGet(void *out, uint16_t expected)
           numin = numin * 16 + (ch - 'A' + 10);
         } else if (ch == ':') {
           if (check == numin) {
-            Serial.println("BINARY LOAD OK");
+            my_printf("BINARY LOAD OK\n");
             memcpy(out,buffer,expected);
             return;
           }
@@ -121,7 +114,7 @@ void hexGet(void *out, uint16_t expected)
     }
   }
 fail:
-  Serial.println("Timeout or error!!");
+  my_printf("Timeout or error!!\n");
   delay(10);
   while (Serial.available()) {
     Serial.read();
@@ -131,107 +124,69 @@ fail:
 void bindPrint(void)
 {
 
-  Serial.print(F("1) Base frequency:   "));
-  Serial.println(bind_data.rf_frequency);
-
-  Serial.print(F("2) RF magic:         "));
-  Serial.println(bind_data.rf_magic, 16);
-
-  Serial.print(F("3) RF power (0-7):   "));
-  Serial.println(bind_data.rf_power);
-
-  Serial.print(F("4) Channel spacing:  "));
-  Serial.println(bind_data.rf_channel_spacing);
-
-  Serial.print(F("5) Hop channels:     "));
+  PRINTF("1) Base frequency:   %ld\n",bind_data.rf_frequency);
+  PRINTF("2) RF magic:         %08lx\n",bind_data.rf_magic);
+  PRINTF("3) RF power (0-7):   %d\n", bind_data.rf_power);
+  PRINTF("4) Channel spacing:  %d\n", bind_data.rf_channel_spacing);
+  PRINT("5) Hop channels:    ");
   for (uint8_t c = 0; (c < MAXHOPS) && (bind_data.hopchannel[c]!=0); c++) {
-    if (c) {
-      Serial.print(",");
-    }
-    Serial.print(bind_data.hopchannel[c]);
+    PRINTF("%c%d",c?',':' ',bind_data.hopchannel[c]);
   }
-  Serial.println();
-
-  Serial.print(F("6) Datarate (0-2):   "));
-  Serial.println(bind_data.modem_params);
-
-  Serial.print(F("7) Channel config:  "));
-  Serial.println(chConfStr[bind_data.flags&0x07]);
-
-  Serial.print(F("8) Telemetry:       "));
-  Serial.println((bind_data.flags&TELEMETRY_ENABLED)?"Enabled":"Disabled");
-
-  Serial.print(F("9) FrSky emulation: "));
-  Serial.println((bind_data.flags&FRSKY_ENABLED)?"Enabled":"Disabled");
-
-  Serial.print(F("0) Serial baudrate:"));
-  Serial.println(bind_data.serial_baudrate);
-
-  Serial.print(F("Calculated packet interval: "));
-  Serial.print(getInterval(&bind_data));
-  Serial.print(F(" == "));
-  Serial.print(1000000L/getInterval(&bind_data));
-  Serial.println(F("Hz"));
-
+  PRINT("\n");
+  PRINTF("6) Datarate (0-2):   %d\n", bind_data.modem_params);
+  PRINTF("7) Channel config:   %s\n", chConfStr[bind_data.flags&0x07]);
+  PRINTF("8) Telemetry:        %s\n", (bind_data.flags&TELEMETRY_ENABLED)?"Enabled":"Disabled");
+  PRINTF("9) FrSky emulation:  %s\n", (bind_data.flags&FRSKY_ENABLED)?"Enabled":"Disabled");
+  PRINTF("0) Serial baudrate:  %ld\n", bind_data.serial_baudrate);
+  PRINTF("Calculated packet interval: %ld ~= %d Hz\n", getInterval(&bind_data),
+         (uint16_t)(1000000L/getInterval(&bind_data)));
 }
 
 void rxPrint(void)
 {
   uint8_t i,pins;
-  Serial.print(F("RX type: "));
+  PRINT("RX type: ");
   if (rx_config.rx_type == RX_FLYTRON8CH) {
     pins=13;
-    Serial.println(F("Flytron/OrangeRX UHF 8ch"));
+    PRINT("Flytron/OrangeRX UHF 8ch\n");
   } else if (rx_config.rx_type == RX_OLRSNG4CH) {
     pins=6;
-    Serial.println(F("OpenLRSngRX mini 4ch"));
+    PRINT("OpenLRSngRX mini 4ch\n");
   } else if (rx_config.rx_type == RX_DTFUHF10CH) {
     pins=10;
-    Serial.println(F("DTF UHF 32-bit 10ch"));
+    PRINT("DTF UHF 32-bit 10ch\n");
   }
   for (i=0; i<pins; i++) {
-    Serial.print((char)(((i+1)>9)?(i+'A'-9):(i+'1')));
-    Serial.print(F(") port "));
-    Serial.print(i+1);
-    Serial.print(F("function: "));
+    PRINTF("%c) port %d function: ",
+	   (char)(((i+1)>9)?(i+'A'-9):(i+'1')),
+	   i+1);
     if (rx_config.pinMapping[i]<16) {
-      Serial.print(F("PWM channel "));
-      Serial.println(rx_config.pinMapping[i]+1);
+      PRINTF("PWM channel %d\n",rx_config.pinMapping[i]+1);
     } else {
-      Serial.println(SPECIALSTR(rx_config.pinMapping[i]));
+      PRINTF("%s\n",(SPECIALSTR(rx_config.pinMapping[i])));
     }
   }
-  Serial.print(F("F) Stop PPM on failsafe : O"));
-  Serial.println((rx_config.flags & FAILSAFE_NOPPM)?"N":"FF");
-  Serial.print(F("G) Stop PWM on failsafe : O"));
-  Serial.println((rx_config.flags & FAILSAFE_NOPWM)?"N":"FF");
-  Serial.print(F("H) Failsafe speed       : "));
-  Serial.print(rx_config.failsafe_delay);
-  Serial.println(F(" x 0.1s"));
-  Serial.print(F("I) Failsafe beacon frq. : "));
+  PRINTF("F) Stop PPM on failsafe : O%s\n",(rx_config.flags & FAILSAFE_NOPPM)?"N":"FF");
+  PRINTF("G) Stop PWM on failsafe : O%s\n",(rx_config.flags & FAILSAFE_NOPWM)?"N":"FF");
+  PRINTF("H) Failsafe speed       : %d x 0.1s\n",rx_config.failsafe_delay);
+  PRINT("I) Failsafe beacon frq. : ");
   if (rx_config.beacon_frequency) {
-    Serial.println(rx_config.beacon_frequency);
-    Serial.print(F("J) Failsafe beacon delay (10-65535): "));
-    Serial.println(rx_config.beacon_deadtime);
-    Serial.print(F("K) Failsafe beacon intv. (5-255): "));
-    Serial.println(rx_config.beacon_interval);
+    PRINTF("%ld\n",rx_config.beacon_frequency);
+    PRINTF("J) Failsafe beacon delay (10-65535): %u\n",rx_config.beacon_deadtime);
+    PRINTF("K) Failsafe beacon intv. (5-255): %u\n",rx_config.beacon_interval);
   } else {
-    Serial.println(F("DISABLED"));
+    PRINT("DISABLED\n");
   }
-  Serial.print(F("L) PPM minimum sync (us)  : "));
-  Serial.println(rx_config.minsync);
-  Serial.print(F("M) PPM RSSI to channel    : "));
+  PRINTF("L) PPM minimum sync (us)  : %u\n", rx_config.minsync);
+  PRINT("M) PPM RSSI to channel    : ");
   if (rx_config.RSSIpwm<16) {
-    Serial.println(rx_config.RSSIpwm + 1);
+    PRINTF("%d\n",rx_config.RSSIpwm + 1);
   } else {
-    Serial.println(F("DISABLED"));
+    PRINT("DISABLED\n");
   }
-  Serial.print(F("N) PPM output limited     : "));
-  Serial.println((rx_config.flags & PPM_MAX_8CH)?"8ch":"N/A");
-  Serial.print(F("O) Timed BIND at startup  : "));
-  Serial.println((rx_config.flags & ALWAYS_BIND)?"Enabled":"Disabled");
-  Serial.print(F("P) Slave mode (experimental): "));
-  Serial.println((rx_config.flags & SLAVE_MODE)?"Enabled":"Disabled");
+  PRINTF("N) PPM output limited     : %s\n", (rx_config.flags & PPM_MAX_8CH)?"8ch":"N/A");
+  PRINTF("O) Timed BIND at startup  : %s\n", (rx_config.flags & ALWAYS_BIND)?"Enabled":"Disabled");
+  PRINTF("P) Slave mode (experimental): %s\n", (rx_config.flags & SLAVE_MODE)?"Enabled":"Disabled");
 }
 
 // Print version, either x.y or x.y.z (if z != 0)
@@ -341,22 +296,17 @@ void RX_menu_headers(void)
   case 3:
   case 2:
   case 1:
-    Serial.print(F("Set output for port "));
-    Serial.println(CLI_menu);
-    Serial.print(F("Valid choices are: [1]-[16] (channel 1-16)"));
+    PRINTF("Set output for port %d\n",CLI_menu);
+    PRINT("Valid choices are: [1]-[16] (channel 1-16)");
     ch=20;
     for (struct rxSpecialPinMap *pm = rxSpecialPins; pm->rxtype; pm++) {
       if ((pm->rxtype!=rx_config.rx_type) || (pm->output!=(CLI_menu-1))) {
         continue;
       }
-      Serial.print(", [");
-      Serial.print(ch);
-      Serial.print("] (");
-      Serial.print(SPECIALSTR(pm->type));
-      Serial.print(")");
+      PRINTF(", [%d] (%s)", ch, SPECIALSTR(pm->type));
       ch++;
     }
-    Serial.println();
+    PRINT("\n");
     break;
   }
 
