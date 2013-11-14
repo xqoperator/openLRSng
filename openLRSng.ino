@@ -54,6 +54,9 @@
 // 6 = DTF UHF DeluxeTX (Atmega32u4)
 #define TX_BOARD_TYPE 2
 
+//####### xqOperaor extensions #######
+#defne I2C_READOUT  1
+
 //####### RX BOARD TYPE #######
 // 3 = Flytron OpenLRS Rx v2 / OrangeRx UHF RX / HawkEye UHF RX
 // 5 = OpenLRSngRX-4ch (DTF UHF)
