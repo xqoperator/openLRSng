@@ -357,6 +357,15 @@ uint8_t serial_tail;
 
 uint8_t hopcount;
 
+#if I2C_READOUT
+void i2cReadoutRequest(void)
+{
+  //put PPM data on i2c bus
+  for( int i=0; i<8; i++ )
+    Wire.write(PPM[i]);
+}
+#endif
+
 void setup()
 {
   //LEDs
@@ -372,6 +381,14 @@ void setup()
 
   pinMode(0, INPUT);   // Serial Rx
   pinMode(1, OUTPUT);  // Serial Tx
+
+#if I2C_READOUT
+  //TODO: pin mode if required
+  //pinMode();
+  // twi setup
+  Wire.begin(66);
+  Wire.onRequest(i2cReadoutRequest);
+#endif
 
   Serial.begin(SERIAL_BAUD_RATE);   //Serial Transmission
   rxReadEeprom();
